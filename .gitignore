@@ -1,0 +1,9 @@
+.#*
+#*
+.cask
+*.elc
+Cask.local
+local-config.el
+local-lelde-config.el
+t
+taskman.eld

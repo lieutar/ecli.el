@@ -1,0 +1,21 @@
+#! /usr/bin/env bash
+
+### lcask
+# Run cask with local package archive settings.
+# If "Cask.local" file exists, this command will prepend to "Cask" file
+# and use it.
+
+if [ -f "Cask" ] ; then
+    if [ -f "Cask.local" ] ;then
+        mv Cask Cask.orig
+        cp Cask.local Cask
+        sed -e "s/(source/;; (source/" Cask.orig >> Cask
+    fi
+    cask "$@"
+    if [ -f "Cask.orig" ] ;then
+        rm Cask
+        mv Cask.orig Cask
+    fi
+else
+    cask "$@"
+fi

@@ -1,0 +1,178 @@
+#! /usr/bin/env bash
+
+###
+### Setup Installer's context
+###
+
+here=`dirname $BASH_SOURCE`
+install_el=$(mktemp)
+
+cleanup(){
+    [ -f $install_el ] && rm $install_el
+}
+
+trap cleanup int
+trap cleanup EXIT
+
+###
+### Location to be installed
+###
+
+# Path to be installed
+prefix=/home/lieutar/.foo
+
+# Path to the definition to local settings
+local_config=
+# About local settings
+# See README.md on https://github.com/lieutar/ecli.el/
+# The section "Installer" will express it.
+
+###
+### Process arguments and interaction
+###
+
+while [ $# -gt 0 ]; do
+    arg=$1
+    shift
+    case "$arg" in
+        --prefix|-P)
+            prefix=$1
+            case "$prefix"; in
+                ""|-*)
+                    echo "--prefix / -P requires an argument"
+                    while [ -z "$prefix" ]; do
+                          printf "Where? "
+                          read prefix
+                    done
+                    ;;
+                *)
+                    shift
+                    ;;
+            esac
+            ;;
+
+        --local-config|-C)
+            local_config=$1
+            case "$local_config" in
+                "" |-*)
+                    echo "--local-config / -C requires an argument"
+                    while [ -z "$local_config" ]; do
+                        printf "Where? "
+                        read local_config
+                    done
+                    while [ -n "$local_config" ] &&\
+                                ! [ -r "$local_config" ]; do
+                        echo "Can't read $local_config"
+                        printf "Where? "
+                        echo "(ignore local-config specification if blank)"
+                        printf "> "
+                        read local_config
+                    ;;
+                *)
+                    shift
+                    ;;
+            esac
+            ;;
+
+        *)
+            echo "Warning: unrecognized argument: $arg"
+            printf "Continue? (yes/no , default=no):"
+            read answer
+            case "$answer" in
+                yes|Yes|YES)
+                    echo "Continue ..."
+                    ;;
+                *)
+                    echo "Abort"
+                    exit 1
+                    ;;
+            esac
+        ;;
+    esac
+done
+
+###
+### Make Emacs Lisp installer
+###
+
+cat <<EOF >$install_el
+;; -*- lexical-binding: t -*-
+(require 'package)
+(require 'url)
+(let ((url-launcher "https://foo.org/repo/foo")
+      (url-app.el   "https://foo.org/repo/foo.el")
+      (prefix   (getenv "PREFIX")))
+  (let ((bin-dir  (format "%s/bin" prefix))
+        (lisp-dir (format "%s/share/lisp" prefix))
+        (elpa-dir (format "%s/cache/elpa" prefix))
+        (local-config (let ((eld (getenv "LOCAL_CONFIG_ELD")))
+                        (when (and eld (file-exists-p eld))
+                          (read (with-temp-buffer
+                                  (insert-file-contents eld)
+                                  (buffer-substring-no-properties
+                                   (point-min) (point-max))))))))
+
+    ;; Make directory if not being.
+    (dolist (dir (list bin-dir lisp-dir elpa-dir))
+      (unless (file-directory-p dir)
+        (make-directory dir t)))
+
+    ;; Installation
+    (let ((local-archives-alist (plist-get local-config :archives))
+          (url-to-local         (plist-get local-config :url-to-local)))
+
+      ;; Install dependencies using package.el
+      (setq package-archives '(
+("melpa-stable" . "https://stable.melpa.org/packages/"))
+)
+      (setq package-user-dir elpa-dir)
+      (dolist (lslot local-archives-alist) ;; Update by local-config
+        (let ((pslot (assoc (car lslot) package-archives)))
+          (when pslot (setcdr pslot (cdr lslot)))))
+      (package-initialize)
+      (dolist (dep '(
+)
+)
+        (package-install dep))
+
+      ;; Install main scripts
+      (let ((install
+             (if (functionp url-to-local)
+                 ;; Get scripts from local repository
+                 (lambda (url into mode)
+                   (let* ((src (funcall url-to-local url))
+                          (dst (expand-file-name (file-name-nondirectory src)
+                                                 into)))
+                     (copy-file src dst)
+                     (chmod dst mode)))
+               ;; Get scripts from public repository
+               (lambda (url into mode)
+                 (let ((buf (url-retrieve-synchronously url))
+                       (dst (expand-file-name
+                             (and (string-match "\\([^/]+\\)\\'" url)
+                                  (match-string 1 url))
+                             into)))
+                   (with-current-buffer buf
+                     (write-region (point-min)(point-max) dst))
+                   (kill-buffer buf)
+                   (chmod dst mode)))
+               )))
+        (install url-launcher bin-dir  #o755)
+        (install url-app.el   lisp-dir #o644))
+      )))
+
+EOF
+
+
+###
+### Run the Emacs Lisp installer
+###
+
+# pass configurations by environment
+export PREFIX=$prefix
+export LOCAL_CONFIG_ELD=$local_config
+
+if ! emacs --batch -Q --script $install_el ; then
+    echo "Installation failed." >&2
+    exit 1
+fi

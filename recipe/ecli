@@ -1,0 +1,2 @@
+(ecli :fetcher github :repo "lieutar/ecli.el")
+

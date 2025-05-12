@@ -1,0 +1,29 @@
+#! /usr/bin/env bash
+
+i=
+u=
+
+if test -n "$*" ; then
+    for f in $*; do
+	if echo $f | grep -e '\.unit.el$' 2>/dev/null ;then
+	    u="$u $f"
+	else
+	    i="$i $f"
+	fi
+    done
+fi
+
+if [ -z "$i" ] && [ -z "$u" ]; then
+    code=0
+    if ! make test-unit ; then
+        code=1
+    fi
+    if ! make test-integration ; then
+        code=1
+    fi
+    exit $code
+elif [ -n "$i" ]; then
+    I="$i" make test-integration
+else
+    U="$u" make test-unit
+fi

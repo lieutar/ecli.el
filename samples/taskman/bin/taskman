@@ -1,0 +1,75 @@
+#! /usr/bin/env bash
+
+###
+### Getting context
+###
+
+here=`dirname $BASH_SOURCE`
+lispdir=`realpath $here/../share/lisp`
+
+# Following code is special as a sample on `ecli''s repository, and
+# it isn't required for ordinary `ecli' apps.
+# Normally this task is the responsibility of the installer.
+[ -l $lispdir/ecli.el ] \
+    || ln -s `realpath $here/../../../ecli.el` $lispdir/ecli.el
+# End of the special part .......................................
+
+###
+### Processing arguments
+###
+
+# If the application needs to handle options like --help or --version
+# that are also recognized by Emacs itself,
+# Emacs will intercept and interpret them as its own options.
+# Such options will not be passed to the Emacs Lisp script.
+#
+# Therefore, application-specific options need to be escaped, for example,
+# by prefixing with "@".
+#
+# In this example, besides escaping standard options,
+# the launcher script also processes the --dbfile / -f option for interaction
+# purposes.
+#
+
+dbfile="taskman.eld"
+args=()
+while test $# -gt 0; do
+    arg=$1
+    shift
+    case "$arg" in
+        --dbfile|-f)
+            args+=("@$arg")
+            dbfile=$1
+            shift;
+            arg=$dbfile
+            ;;
+        -*)
+            arg="@$arg"
+            ;;
+    esac
+    args+=("$arg")
+done
+
+
+###
+### Handling interaction
+###
+
+# Emacs batch mode cannot perform interactive input/output directly.
+# Therefore, handling interaction is the responsibility of the launcher script.
+
+if ! test -f "$dbfile" ; then
+    echo "This command will make the file $dbfile."
+    printf "Continue? (yes / no):"
+    read response
+    if ! test "$response" = "yes" ; then
+        echo "Abort"
+        exit
+    fi
+fi
+
+###
+### Executing the Emacs Lisp script
+###
+
+emacs --batch -Q -L "$lispdir" -l "taskman.el" "${args[@]}"

@@ -1,0 +1,41 @@
+;; -*- lisp-data -*-
+(lelde-project
+ :name "ecli.el"
+ :index "ecli"
+ :libs nil
+ :version "0.1.0"
+ :keywords ("lisp" "cli")
+ :url      "https://github.com/lieutar/ecli.el"
+ :brief "Command Line App Framework for Emacs"
+ :commentary "Provide a mechanism for creating CLI applications in Emacs Lisp.
+The applications you can create
+have their logic determined by functions named in specific patterns,
+and their documentation automatically creates help messages."
+ :files nil
+ :files-to-update ("Makefile" "Cask" "recipe/ecli" "src/ecli/META.el")
+ :template-alist (("src/ecli.bundled.el" "ecli.el")
+                  ("src/README.md"       "README.md"))
+ :copyright "2025 lieutar <lieutar@gmail.com>"
+ :author "lieutar <lieutar@gmail.com>"
+ :license "This project is licensed under the GNU General Public License v3.
+see: https://www.gnu.org/licenses/gpl-3.0.html"
+ :emacs "29.3"
+ :sources (gnu melpa
+               ("looper" "https://lieutar.github.io/looper-elpa/"))
+ :dependency ()
+ :dev-dependency (lelde
+                  with-advice
+                  slash-tmp
+                  s
+                  dash)
+ :test-feature ""
+ :test-runner ""
+ :src-dir "src"
+ :rsc-dir "rsc"
+ :recipe-dir "recipe"
+ :scripts-dir "scripts"
+ :test-integration-suffix ".test.el"
+ :test-unit-suffix ".unit.el"
+ :test-scripts-dir "test/scripts"
+ :test-lib-dir "test/lib"
+ :test-rsc-dir "test/rsc")

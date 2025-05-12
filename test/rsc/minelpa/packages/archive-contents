@@ -1,0 +1,22 @@
+(1
+ (a . [(20250511 1234) ((b (0))(d (0))) "" tar
+       ((:commit . "")
+        (:revdesc . "")
+        (:keywords)
+        (:url . ""))])
+ (b . [(20250511 1234) ((c (0))) "" tar
+       ((:commit . "")
+        (:revdesc . "")
+        (:keywords)
+        (:url . ""))])
+ (c . [(20250511 1234) nil "" tar
+       ((:commit . "")
+        (:revdesc . "")
+        (:keywords)
+        (:url . ""))])
+ (d . [(20250511 1234) nil "" tar
+       ((:commit . "")
+        (:revdesc . "")
+        (:keywords)
+        (:url . ""))])
+ )

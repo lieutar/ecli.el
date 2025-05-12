@@ -1,0 +1,18 @@
+#! /usr/bin/bash
+
+for f in .cask Cask ;do
+    if [ -f "$f" ] ; then
+        rm $f
+    elif [ -d "$f" ] ; then
+        rm -r $f
+    fi
+done
+
+cat <<EOF >Cask
+(source "mm" "~/work/emacs/melpa-mirror/packages")
+(source "looper" "~/work/emacs/looper-elpa/packages")
+(depends-on "lelde")
+EOF
+
+cask install
+cask exec emacs --batch -l lelde -f lelde-init-project
