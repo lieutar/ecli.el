@@ -34,8 +34,9 @@
 (lelde-ert eclinstall::install-deps
   (/tmp/let (elpa/)
     (/tmp/weird-magic-spell)
-    (eclinstall::install-deps
-     elpa/ nil `(("minelpa" . ,minelpa/)) '(a))
+    (with-advice (message)
+      (eclinstall::install-deps
+       elpa/ nil `(("minelpa" . ,minelpa/)) '(a)))
     (should (file-exists-p (expand-file-name "a-20250511.1234/a.el" elpa/)))
     (should (file-exists-p (expand-file-name "b-20250511.1234/b.el" elpa/)))
     (should (file-exists-p (expand-file-name "c-20250511.1234/c.el" elpa/)))
@@ -48,30 +49,11 @@
     (/tmp/weird-magic-spell)
     (with-temp-file orig (insert "bar!!"))
     (let ((url (format "file://%s" orig)))
-      (eclinstall::install-from-url url into/ #o700)
+      (eclinstall::install-from-url url into/ )
       (let* ((bn (file-name-nondirectory orig))
              (dst (expand-file-name bn into/)))
         (when (should (file-exists-p dst))
-          (should (equal (f-read dst) "bar!!"))
-          (let ((stat (file-attributes dst)))
-            (should (equal (file-attribute-modes stat)
-                           "-rwx------"))))))))
-
-(lelde-ert eclinstall::install-from-lolcal
-  (/tmp/let (orig
-             into/)
-    (/tmp/weird-magic-spell)
-    (with-temp-file orig (insert "bar!!"))
-    (eclinstall::install-from-local "https://exapmle.org"
-                                    (lambda (src) orig)
-                                    into/ #o700)
-    (let* ((bn (file-name-nondirectory orig))
-           (dst (expand-file-name bn into/)))
-      (when (should (file-exists-p dst))
-        (should (equal (f-read dst) "bar!!"))
-        (let ((stat (file-attributes dst)))
-          (should (equal (file-attribute-modes stat)
-                         "-rwx------")))))))
+          (should (equal (f-read dst) "bar!!")))))))
 
 (lelde-ert eclinstall::install-scripts
   (/tmp/let (bin/
@@ -80,20 +62,32 @@
              app.el)
     (/tmp/weird-magic-spell)
     (with-temp-file launcher (insert "content of launcher"))
-    (with-temp-file app.el   (insert "content of app.el"))
+    (with-temp-file app.el   (insert ";;content of app.el"))
     (eclinstall::install-scripts
      bin/  (format "http://example.org%s" launcher)
      lisp/ (format "http://example.org%s" app.el)
-     '(:url-to-local (lambda (url) (replace-regexp-in-string
-                                    "\\`http://example\\.org" "" url))))
+     '(:url-to-local
+       (lambda (url)
+         (if (string-match "http://example.org" url)
+             (replace-regexp-in-string "\\`http://example\\.org" "" url)
+           (locate-library "ecli.el")))))
     (let ((dst-launcher
            (expand-file-name (file-name-nondirectory launcher) bin/))
           (dst-app.el
-           (expand-file-name (file-name-nondirectory app.el) lisp/)))
+           (expand-file-name (file-name-nondirectory app.el) lisp/))
+          (dst-ecli.el
+           (expand-file-name "ecli.el" lisp/)))
       (when (should (file-exists-p dst-launcher))
-        (should (equal (f-read dst-launcher) "content of launcher")))
+        (should (equal (f-read dst-launcher) "content of launcher"))
+        (let ((stat (file-attributes dst-launcher)))
+          (should (equal (file-attribute-modes stat) "-rwxr-xr-x"))))
       (when (should (file-exists-p dst-app.el))
-        (should (equal (f-read dst-app.el) "content of app.el"))))))
+        (should (equal (f-read dst-app.el) ";;content of app.el")))
+      (should (file-exists-p (replace-regexp-in-string
+                              "\\(?:\\.el\\)?\\'" ".elc" dst-app.el)))
+      (should (file-exists-p dst-ecli.el))
+      (should (file-exists-p (replace-regexp-in-string
+                              "\\(?:\\.el\\)?\\'" ".elc" dst-ecli.el))))))
 
 (lelde-ert eclinstall::main
   (let ((prefix "~/apps/hoge")

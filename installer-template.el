@@ -2,6 +2,9 @@
 (require 'package)
 (require 'url)
 
+(defconst eclinstall::$ecli-url
+  "https://raw.githubusercontent.com/lieutar/ecli.el/refs/heads/main/ecli.el")
+
 (defun eclinstall::get-local-config (eld)
   (when (and eld (file-exists-p eld))
     (read (with-temp-buffer
@@ -53,33 +56,29 @@
     (kill-buffer response-buffer)
     body))
 
-(defun eclinstall::install-from-url (url into mode)
+(defun eclinstall::install-from-url (url into)
+  (unless (string-match "\\`[a-z]+://" url)
+    (setq url (format "file://%s" (expand-file-name url))))
   (let ((dst (expand-file-name
                 (and (string-match "\\([^/]+\\)\\'" url) (match-string 1 url))
                 into)))
     (with-temp-file dst (insert (eclinstall::url-retrieve url)))
-    (chmod dst mode)))
-
-(defun eclinstall::install-from-local (url url-to-local into mode)
-  (let* ((src (funcall url-to-local url))
-         (dst (expand-file-name (file-name-nondirectory src)
-                                into)))
-    (copy-file src dst)
-    (chmod dst mode)))
+    dst))
 
 (defun eclinstall::install-scripts
     (bin-dir url-launcher lisp-dir url-app.el local-config)
   ;; Install main scripts
-  (let ((url-to-local         (plist-get local-config :url-to-local)))
-    (let ((install
-           (if (functionp url-to-local)
-               ;; Get scripts from local repository
-               (lambda (url into mode)
-                 (eclinstall::install-from-local url url-to-local into mode))
-             ;; Get scripts from public repository
-             #'eclinstall::install-from-url)))
-      (funcall install url-launcher bin-dir  #o755)
-      (funcall install url-app.el   lisp-dir #o644))))
+  (let ((url-to-local (or (plist-get local-config :url-to-local) identity)))
+    (chmod (eclinstall::install-from-url
+            (funcall url-to-local url-launcher) bin-dir)
+           #o755)
+    (let ((load-path (cons lisp-dir load-path)))
+      (byte-compile-file
+       (eclinstall::install-from-url
+        (funcall url-to-local eclinstall::$ecli-url) lisp-dir))
+      (byte-compile-file
+       (eclinstall::install-from-url
+        (funcall url-to-local url-app.el)            lisp-dir)))))
 
 (defun eclinstall::main ()
   (let ((url-launcher "<<url-launcher>>")

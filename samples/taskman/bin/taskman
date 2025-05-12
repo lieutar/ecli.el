@@ -7,12 +7,12 @@
 here=`dirname $BASH_SOURCE`
 lispdir=`realpath $here/../share/lisp`
 
-# Following code is special as a sample on `ecli''s repository, and
+# Following code is special as a sample on `ecli''s repository, and ............
 # it isn't required for ordinary `ecli' apps.
 # Normally this task is the responsibility of the installer.
 [ -l $lispdir/ecli.el ] \
     || ln -s `realpath $here/../../../ecli.el` $lispdir/ecli.el
-# End of the special part .......................................
+# End of the special part ......................................................
 
 ###
 ### Processing arguments
