@@ -7,3 +7,4 @@ local-config.el
 local-lelde-config.el
 t
 taskman.eld
+scripts/release
